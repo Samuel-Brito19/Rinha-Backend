@@ -1,9 +1,28 @@
 use axum::{http::StatusCode, response::IntoResponse, routing::{get, post}, Router};
+use uuid::Uuid;
 use std::collections::HashMap;
+use time::{macros::date, Date};
 
+struct Person {
+    id: Uuid,
+    name: String,
+    nickname: String,
+    birth_date: Date,
+    stack: Vec<String>
+}
 #[tokio::main]
 async fn main() {
-    let people: HashMap<uuid, > = HashMap::new();
+    let mut people: HashMap<Uuid, Person> = HashMap::new();
+
+    let person = Person {
+        id: Uuid::now_v7(),
+        name: "Samuel".to_string(),
+        nickname: "Major".to_string(),
+        birth_date: date!(2001-10-29),
+        stack: vec!["Typescript".to_string(), "Javascript".to_string()]
+    };
+
+    people.insert(person.id, person);
     let app = Router::new()
     .route("/pessoas", get(search_people))
     .route("/pessoas/:id", get(find_person))
