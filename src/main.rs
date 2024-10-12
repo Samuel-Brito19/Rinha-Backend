@@ -1,9 +1,4 @@
-use axum::{extract::{Path, State}, 
-    http::StatusCode, 
-    response::IntoResponse, 
-    routing::{get, post}, 
-    Router,
-    Json
+use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get, post}, Json, Router
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -81,6 +76,27 @@ impl Nickaname {
 }
 
 #[derive(Clone, Deserialize)]
+#[serde(try_from = "String")]
+pub struct Tech(String);
+
+impl TryFrom<String> for Tech {
+    type Error = &'static str;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < 100 {
+            Ok(Self(value))
+        } else {
+            Err("tech is too big")
+        }
+    }
+}
+
+impl From<Tech> for String {
+    fn from(value: Tech) -> Self {
+        value.0
+    }
+}
+
+#[derive(Clone, Deserialize)]
 pub struct NewPerson {
     #[serde(rename = "nome")]
     name: PersonName,
@@ -144,13 +160,14 @@ async fn create_person(
         name: new_person.name.0,
         nickname: new_person.nickname.0,
         birth_date: new_person.birth_date,
-        stack: new_person.stack
+        stack: new_person
+            .stack
+            .map(|stack| stack.into_iter().map(String::from).collect())
     };
 
     people.lock().await.insert(id, person.clone());
     Ok((StatusCode::OK, Json(person)))
 }
-async fn count_person(people: State<AppState>) -> impl IntoResponse {
-    let count = people.lock().await.len();
-    (StatusCode::OK, Json(count))
+async fn count_person(State(people): State<AppState>) -> impl IntoResponse {
+    Json(people.lock().await.len());
 }
