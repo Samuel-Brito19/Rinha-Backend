@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use std::{collections::HashMap, sync::Arc};
-use time::Date;
+use time:: Date;
 
 time::serde::format_description!(date_format, Date, "[year]-[month]-[day]");
 #[derive(Clone,Serialize)]
@@ -25,9 +25,36 @@ pub struct Person {
 }
 
 #[derive(Clone, Deserialize)]
+pub struct PersonName(String);
+
+pub enum PersonNameError {
+    PersonNameTooLong
+}
+
+impl TryFrom<String> for PersonName {
+    type Error = PersonNameError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() > 32 {
+            Ok(PersonName(value))
+        } else {
+            Err(PersonNameError::PersonNameTooLong)
+        }
+    }
+}
+
+impl PersonName {
+    pub fn parse_string(name: String) -> Result<PersonName, PersonNameError> {
+        if name.len() > 32 {
+            Ok(PersonName(name))
+        } else {
+            Err(PersonNameError::PersonNameTooLong)
+        }
+    }
+}
+#[derive(Clone, Deserialize)]
 pub struct NewPerson {
     #[serde(rename = "nome")]
-    name: String,
+    name: PersonName,
     #[serde(rename = "apelido")]
     nickname: String,
     #[serde(rename = "nascimento", with = "date_format")]
@@ -69,17 +96,30 @@ async fn create_person(
     State(people): State<AppState>,
     Json(new_person): Json<NewPerson>
 ) -> impl IntoResponse {
+    if new_person.name.0.len() > 100 || new_person.nickname.len() > 32 {
+        return Err(StatusCode::UNPROCESSABLE_ENTITY)
+    }
+
+    match &new_person.stack {
+        Some(stack) => {
+            if stack.iter().any(|tech| tech.len() > 32) {
+                return Err(StatusCode::UNPROCESSABLE_ENTITY)
+            }
+        }
+        _ => {}
+    }
+     
     let id = Uuid::now_v7();
     let person = Person {
         id, 
-        name: new_person.name,
+        name: new_person.name.0,
         nickname: new_person.nickname,
         birth_date: new_person.birth_date,
         stack: new_person.stack
     };
 
     people.lock().await.insert(id, person.clone());
-    (StatusCode::OK, Json(person))
+    Ok((StatusCode::OK, Json(person)))
 }
 async fn count_person(people: State<AppState>) -> impl IntoResponse {
     let count = people.lock().await.len();
