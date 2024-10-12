@@ -32,12 +32,12 @@ pub enum PersonNameError {
 }
 
 impl TryFrom<String> for PersonName {
-    type Error = PersonNameError;
+    type Error = &'static str;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.len() > 32 {
             Ok(PersonName(value))
         } else {
-            Err(PersonNameError::PersonNameTooLong)
+            Err("name is too big")
         }
     }
 }
@@ -51,12 +51,41 @@ impl PersonName {
         }
     }
 }
+
+#[derive(Clone, Deserialize)]
+pub struct Nickaname(String);
+
+pub enum NickanameError {
+    NickanameTooLong
+}
+
+impl TryFrom<String> for Nickaname {
+    type Error = &'static str;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < 100 {
+            Ok(Nickaname(value))
+        } else {
+            Err("name is too big")
+        }
+    }
+}
+
+impl Nickaname {
+    pub fn parse_string(name: String) -> Result<Nickaname, NickanameError> {
+        if name.len() > 32 {
+            Ok(Nickaname(name))
+        } else {
+            Err(NickanameError::NickanameTooLong)
+        }
+    }
+}
+
 #[derive(Clone, Deserialize)]
 pub struct NewPerson {
     #[serde(rename = "nome")]
     name: PersonName,
     #[serde(rename = "apelido")]
-    nickname: String,
+    nickname: Nickaname,
     #[serde(rename = "nascimento", with = "date_format")]
     birth_date: Date,
     stack: Option<Vec<String>>
@@ -96,7 +125,7 @@ async fn create_person(
     State(people): State<AppState>,
     Json(new_person): Json<NewPerson>
 ) -> impl IntoResponse {
-    if new_person.name.0.len() > 100 || new_person.nickname.len() > 32 {
+    if new_person.name.0.len() > 100 || new_person.nickname.0.len() > 32 {
         return Err(StatusCode::UNPROCESSABLE_ENTITY)
     }
 
@@ -113,7 +142,7 @@ async fn create_person(
     let person = Person {
         id, 
         name: new_person.name.0,
-        nickname: new_person.nickname,
+        nickname: new_person.nickname.0,
         birth_date: new_person.birth_date,
         stack: new_person.stack
     };
