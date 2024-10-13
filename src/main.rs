@@ -5,6 +5,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 use std::{collections::HashMap, sync::Arc};
 use time:: Date;
+mod persistence;
 
 time::serde::format_description!(date_format, Date, "[year]-[month]-[day]");
 #[derive(Clone,Serialize)]
