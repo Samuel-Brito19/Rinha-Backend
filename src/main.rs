@@ -1,5 +1,6 @@
 use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get, post}, Json, Router
 };
+use persistence::PostgresRepository;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -27,6 +28,9 @@ pub enum PersonNameError {
     PersonNameTooLong
 }
 
+pub struct PostgresRepository {
+    pool: PgPool
+}
 impl TryFrom<String> for PersonName {
     type Error = &'static str;
     fn try_from(value: String) -> Result<Self, Self::Error> {
@@ -111,7 +115,9 @@ type AppState = Arc<Mutex<HashMap<Uuid, Person>>>;
 #[tokio::main]
 async fn main() {
     let people: HashMap<Uuid, Person> = HashMap::new();
+    let repo = PostgresRepository {
 
+    }
     let app_state = Arc::new(Mutex::new(people));
     let app = Router::new()
     .route("/people", get(search_people))
