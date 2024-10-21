@@ -8,7 +8,7 @@ use time:: Date;
 mod persistence;
 
 time::serde::format_description!(date_format, Date, "[year]-[month]-[day]");
-#[derive(Clone,Serialize)]
+#[derive(Clone,Serialize, sqlx::FromRow)]
 pub struct Person {
     id: Uuid,
     #[serde(rename = "nome")]
